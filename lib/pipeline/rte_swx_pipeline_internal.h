@@ -7,6 +7,7 @@
 #include <inttypes.h>
 #include <string.h>
 #include <sys/queue.h>
+#include<stdio.h>
 
 #include <rte_bitops.h>
 #include <rte_byteorder.h>
@@ -349,7 +350,7 @@ enum instruction_type {
 	INSTR_MOV_128_32, /* dst and src in NBO format, size(dst) = 128 bits, size(src) = 32 b. */
 	INSTR_MOV_32_128, /* dst and src in NBO format, size(dst) = 32 bits, size(src) = 128 b. */
 	INSTR_MOV_I,   /* dst = HMEF, src = I; size(dst) <= 64 bits. */
-
+	INSTR_MOV_TS,
 	/* movh dst src
 	 * Read/write the upper half (i.e. bits 127 .. 64) of a 128-bit field into/from a 64-bit
 	 * header field:
@@ -1317,6 +1318,17 @@ instr_operand_nbo(struct thread *t, const struct instr_operand *x)
 	*dst64_ptr = (dst64 & ~dst64_mask) | (src & dst64_mask);               \
 }
 
+#define MOV_TS(thread, ip)  \
+{                    	\
+	uint8_t *dst_struct = (thread)->structs[(ip)->mov.dst.struct_id];      \
+	uint64_t *dst64_ptr = (uint64_t *)&dst_struct[(ip)->mov.dst.offset];   \
+	uint64_t dst64 = *dst64_ptr;                                           \
+	uint64_t dst64_mask = UINT64_MAX >> (64 - (ip)->mov.dst.n_bits);       \
+	uint64_t src64;							     \
+	src64= rte_get_timer_cycles() * 1000000000 / rte_get_timer_hz();	\
+	*dst64_ptr = (dst64 & ~dst64_mask) | (src64 & dst64_mask);               \
+}
+
 #if RTE_BYTE_ORDER == RTE_LITTLE_ENDIAN
 
 #define MOV_MH(thread, ip)  \
@@ -1381,9 +1393,8 @@ instr_operand_nbo(struct thread *t, const struct instr_operand *x)
 	uint64_t *dst64_ptr = (uint64_t *)&dst_struct[(ip)->mov.dst.offset];   \
 	uint64_t dst64 = *dst64_ptr;                                           \
 	uint64_t dst64_mask = UINT64_MAX >> (64 - (ip)->mov.dst.n_bits);       \
-									       \
-	uint64_t src = (ip)->mov.src_val;                                      \
-									       \
+	uint64_t src;							     \
+	src = (ip)->mov.src_val;					\
 	*dst64_ptr = (dst64 & ~dst64_mask) | (src & dst64_mask);               \
 }
 
@@ -1721,7 +1732,12 @@ __instr_rx_exec(struct rte_swx_pipeline *p, struct thread *t, const struct instr
 	t->n_headers_out = 0;
 
 	/* Meta-data. */
+
+
 	METADATA_WRITE(t, ip->io.io.offset, ip->io.io.n_bits, p->port_id);
+	
+	//METADATA_WRITE(t, ip->io.io.offset, ip->io.io.n_bits, rte_get_tsc_cycles);
+
 
 	/* Tables. */
 	t->table_state = p->table_state;
@@ -2645,6 +2661,16 @@ __instr_mov_mh_exec(struct rte_swx_pipeline *p __rte_unused,
 }
 
 static inline void
+__instr_mov_ts_exec(struct rte_swx_pipeline *p __rte_unused,
+		    struct thread *t,
+		    const struct instruction *ip)
+{
+	TRACE("[Thread %2u] mov (mh)\n", p->thread_id);
+
+	MOV_TS(t, ip);
+}
+
+	static inline void
 __instr_mov_hm_exec(struct rte_swx_pipeline *p __rte_unused,
 		    struct thread *t,
 		    const struct instruction *ip)
@@ -2784,7 +2810,7 @@ __instr_mov_32_128_exec(struct rte_swx_pipeline *p __rte_unused,
 static inline void
 __instr_mov_i_exec(struct rte_swx_pipeline *p __rte_unused,
 		   struct thread *t,
-		   const struct instruction *ip)
+		    struct instruction *ip)
 {
 	TRACE("[Thread %2u] mov m.f %" PRIx64 "\n", p->thread_id, ip->mov.src_val);
 

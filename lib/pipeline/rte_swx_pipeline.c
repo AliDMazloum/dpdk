@@ -3202,6 +3202,18 @@ instr_mov_translate(struct rte_swx_pipeline *p,
 	fdst = struct_field_parse(p, NULL, dst, &dst_struct_id);
 	CHECK(fdst, EINVAL);
 	CHECK(!fdst->var_size, EINVAL);
+	
+	
+	
+
+	if(strcmp(src,"m.pna_main_input_metadata_timestamp") == 0) {
+		instr->type = INSTR_MOV_TS;
+		instr->mov.dst.struct_id = (uint8_t)dst_struct_id;
+		instr->mov.dst.n_bits = fdst->n_bits;
+		instr->mov.dst.offset = fdst->offset / 8;
+		//instr->mov.src_val = 123;
+		return 0;
+	}
 
 	/* MOV, MOV_MH, MOV_HM, MOV_HH, MOV16, MOVDMA. */
 	fsrc = struct_field_parse(p, action, src, &src_struct_id);
@@ -3253,7 +3265,7 @@ instr_mov_translate(struct rte_swx_pipeline *p,
 		instr->mov.src.offset = fsrc->offset / 8;
 		return 0;
 	}
-
+	 
 	/* MOV_I. */
 	CHECK(fdst->n_bits <= 64, EINVAL);
 	src_val = strtoull(src, &src, 0);
@@ -3267,6 +3279,7 @@ instr_mov_translate(struct rte_swx_pipeline *p,
 	instr->mov.dst.n_bits = fdst->n_bits;
 	instr->mov.dst.offset = fdst->offset / 8;
 	instr->mov.src_val = src_val;
+	
 	return 0;
 }
 
@@ -3277,6 +3290,18 @@ instr_mov_exec(struct rte_swx_pipeline *p)
 	struct instruction *ip = t->ip;
 
 	__instr_mov_exec(p, t, ip);
+
+	/* Thread. */
+	thread_ip_inc(p);
+}
+
+static inline void
+instr_mov_ts_exec(struct rte_swx_pipeline *p)
+{
+	struct thread *t = &p->threads[p->thread_id];
+	struct instruction *ip = t->ip;
+
+	__instr_mov_ts_exec(p, t, ip);
 
 	/* Thread. */
 	thread_ip_inc(p);
@@ -7562,6 +7587,7 @@ static instr_exec_t instruction_table[] = {
 
 	[INSTR_MOV] = instr_mov_exec,
 	[INSTR_MOV_MH] = instr_mov_mh_exec,
+	[INSTR_MOV_TS] = instr_mov_ts_exec,
 	[INSTR_MOV_HM] = instr_mov_hm_exec,
 	[INSTR_MOV_HH] = instr_mov_hh_exec,
 	[INSTR_MOV_DMA] = instr_mov_dma_exec,
@@ -11901,6 +11927,7 @@ instr_type_to_name(struct instruction *instr)
 	case INSTR_MOV_128_32: return "INSTR_MOV_128_32";
 	case INSTR_MOV_32_128: return "INSTR_MOV_32_128";
 	case INSTR_MOV_I: return "INSTR_MOV_I";
+	case INSTR_MOV_TS: return "INSTR_MOV_TS";
 
 	case INSTR_MOVH: return "INSTR_MOVH";
 
@@ -12966,6 +12993,7 @@ static instruction_export_t export_table[] = {
 
 	[INSTR_MOV] = instr_mov_export,
 	[INSTR_MOV_MH] = instr_mov_export,
+	[INSTR_MOV_TS] = instr_mov_export,
 	[INSTR_MOV_HM] = instr_mov_export,
 	[INSTR_MOV_HH] = instr_mov_export,
 	[INSTR_MOV_DMA] = instr_mov_export,
@@ -13200,6 +13228,7 @@ instr_type_to_func(struct instruction *instr)
 
 	case INSTR_MOV: return "__instr_mov_exec";
 	case INSTR_MOV_MH: return "__instr_mov_mh_exec";
+	case INSTR_MOV_TS: return "__instr_mov_ts_exec";
 	case INSTR_MOV_HM: return "__instr_mov_hm_exec";
 	case INSTR_MOV_HH: return "__instr_mov_hh_exec";
 	case INSTR_MOV_DMA: return "__instr_mov_dma_exec";
