@@ -1,15 +1,12 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright(c) 2022 Intel Corporation
  */
-
-#include <stdalign.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
 #include <arpa/inet.h>
 
 #include <rte_common.h>
-#include <rte_random.h>
 #include <rte_ip.h>
 #include <rte_tailq.h>
 #include <rte_eal_memconfig.h>
@@ -157,7 +154,7 @@ struct rte_swx_ipsec {
 	/*
 	 * Table memory.
 	 */
-	alignas(RTE_CACHE_LINE_SIZE) uint8_t memory[];
+	uint8_t memory[] __rte_cache_aligned;
 };
 
 static inline struct ipsec_sa *
@@ -1456,7 +1453,7 @@ crypto_xform_get(struct rte_swx_ipsec_sa_params *p,
 		switch (p->crypto.cipher_auth.cipher.alg) {
 		case RTE_CRYPTO_CIPHER_AES_CBC:
 		case RTE_CRYPTO_CIPHER_3DES_CBC:
-			salt = rte_rand();
+			salt = (uint32_t)rand();
 			break;
 
 		case RTE_CRYPTO_CIPHER_AES_CTR:
