@@ -705,7 +705,7 @@ cmd_pipeline_libbuild(char **tokens,
 		 "gcc -c -O3 -fpic -Wno-deprecated-declarations -o %s %s "
 		 "-I %s/lib/pipeline "
 		 "-I %s/lib/eal/include "
-		 "-I %s/lib/eal/arm/include "
+		 "-I %s/lib/eal/x86/include "
 		 "-I %s/lib/eal/include/generic "
 		 "-I %s/lib/log "
 		 "-I %s/lib/meter "
