@@ -1329,7 +1329,7 @@ instr_operand_nbo(struct thread *t, const struct instr_operand *x)
 	uint64_t dst64_mask = UINT64_MAX >> (64 - (ip)->mov.dst.n_bits);       \
 											\
 	uint64_t src64;							     \
-	src64= rte_get_timer_cycles() * 1000000 / rte_get_timer_hz();	\
+	src64= rte_get_timer_cycles() * 1000000000 / rte_get_timer_hz();	\
 	*dst64_ptr = (dst64 & ~dst64_mask) | (src64 & dst64_mask);               \
 }
 
@@ -1341,7 +1341,7 @@ instr_operand_nbo(struct thread *t, const struct instr_operand *x)
 	uint64_t dst64_mask = UINT64_MAX >> (64 - (ip)->mov.dst.n_bits);       \
 											\
 	uint64_t src64;							     \
-	src64= rte_get_timer_cycles() * 1000000 / rte_get_timer_hz();	\
+	src64= rte_get_timer_cycles() * 1000000000 / rte_get_timer_hz();	\
 	*dst64_ptr = (dst64 & ~dst64_mask) | (src64 & dst64_mask);               \
 }
 

@@ -2023,6 +2023,80 @@ cmd_pipeline_regwr(char **tokens,
 	return;
 }
 
+////////////////////////////////////////// Reg reset ///////////////////////////////////////////
+
+static const char cmd_pipeline_regrst_help[] =
+"pipeline <pipeline_name> regrst <register_array_name> rst_index <index>\n";
+
+static void
+cmd_pipeline_regrst(char **tokens,
+	uint32_t n_tokens,
+	char *out,
+	size_t out_size,
+	void *obj __rte_unused)
+{
+	struct rte_swx_pipeline *p;
+	struct rte_swx_ctl_pipeline *ctl;
+	const char *pipeline_name, *name;
+	uint64_t value = 0;
+	int status;
+
+	if (n_tokens < 6) {
+		snprintf(out, out_size, MSG_ARG_MISMATCH, tokens[0]);
+		return;
+	}
+
+	pipeline_name = tokens[1];
+	p = rte_swx_pipeline_find(pipeline_name);
+	ctl = rte_swx_ctl_pipeline_find(pipeline_name);
+	if (!p || !ctl) {
+		snprintf(out, out_size, MSG_ARG_INVALID, "pipeline_name");
+		return;
+	}
+
+	if (strcmp(tokens[2], "regrst")) {
+		snprintf(out, out_size, MSG_ARG_NOT_FOUND, "regrst");
+		return;
+	}
+
+	name = tokens[3];
+
+
+	/* index. */
+	if (!strcmp(tokens[4], "rst_index")) {
+		uint32_t idx = 0;
+		printf("Ali");
+
+		if (n_tokens != 6) {
+			snprintf(out, out_size, MSG_ARG_MISMATCH, tokens[0]);
+			return;
+		}
+
+		if (parser_read_uint32(&idx, tokens[5])) {
+			snprintf(out, out_size, MSG_ARG_INVALID, "index");
+			return;
+		}
+
+
+		for(int i = 0; i< idx; i++){
+			status = rte_swx_ctl_pipeline_regarray_write(p, name, i, 0);
+			if (status) {
+				snprintf(out, out_size, "Command failed.\n");
+				return;
+			}
+			snprintf(out, out_size, "Values from 0 to %u are set to 0\n", idx);
+		}
+		
+		return;
+	}
+
+	/* anything else. */
+	snprintf(out, out_size, "Invalid token %s\n.", tokens[6]);
+	return;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+
 static const char cmd_pipeline_meter_profile_add_help[] =
 "pipeline <pipeline_name> meter profile <profile_name> add "
 	"cir <cir> pir <pir> cbs <cbs> pbs <pbs>\n";
@@ -3473,6 +3547,7 @@ cmd_help(char **tokens,
 			"\tpipeline abort\n"
 			"\tpipeline regrd\n"
 			"\tpipeline regwr\n"
+			"\tpipeline regrst\n"
 			"\tpipeline meter profile add\n"
 			"\tpipeline meter profile delete\n"
 			"\tpipeline meter reset\n"
@@ -3658,6 +3733,12 @@ cmd_help(char **tokens,
 	if ((strcmp(tokens[0], "pipeline") == 0) &&
 		(n_tokens == 2) && (strcmp(tokens[1], "regwr") == 0)) {
 		snprintf(out, out_size, "\n%s\n", cmd_pipeline_regwr_help);
+		return;
+	}
+
+	if ((strcmp(tokens[0], "pipeline") == 0) &&
+		(n_tokens == 2) && (strcmp(tokens[1], "regrst") == 0)) {
+		snprintf(out, out_size, "\n%s\n", cmd_pipeline_regrst_help);
 		return;
 	}
 
@@ -3944,6 +4025,12 @@ cli_process(char *in, char *out, size_t out_size, void *obj)
 		if ((n_tokens >= 3) &&
 			(strcmp(tokens[2], "regwr") == 0)) {
 			cmd_pipeline_regwr(tokens, n_tokens, out, out_size, obj);
+			return;
+		}
+
+		if ((n_tokens >= 3) &&
+			(strcmp(tokens[2], "regrst") == 0)) {
+			cmd_pipeline_regrst(tokens, n_tokens, out, out_size, obj);
 			return;
 		}
 
